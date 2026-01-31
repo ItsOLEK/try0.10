@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مساعد ختم القرآن الكريم</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri&family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #f8fafc;
+        }
+        .quran-font {
+            font-family: 'Amiri', serif;
+        }
+        .card-active {
+            border: 2px solid #059669;
+            background-color: #ecfdf5;
+        }
+        /* تصميم الرسالة المنبثقة */
+        #congrats-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Congrats Modal -->
+    <div id="congrats-modal">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-t-8 border-emerald-600">
+            <div class="text-5xl mb-4">🎉</div>
+            <h3 class="text-2xl font-bold text-emerald-800 mb-4 quran-font">مبارك الختمة!</h3>
+            <p class="text-gray-600 mb-6 leading-relaxed">
+                هنيئاً لك ما أنجزت في شهر الخير. تذكر أن القرآن الكريم ربيع القلوب في كل زمان، فاجعله رفيقك الدائم بعد رمضان كما كان فيه.
+            </p>
+            <button onclick="closeModal()" class="bg-emerald-600 text-white px-8 py-2 rounded-full hover:bg-emerald-700 transition">آمين، تقبل الله</button>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-emerald-700 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold quran-font">📖 رفيق الختمة</h1>
+            <div id="date-display" class="text-sm"></div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8 max-w-4xl">
+        
+        <!-- Welcome & Goal Section -->
+        <section class="bg-white rounded-2xl p-6 shadow-sm mb-8 text-center border-t-4 border-emerald-500">
+            <h2 class="text-xl font-bold mb-2">مرحباً بك في رحلة الختم</h2>
+            <p class="text-gray-600 mb-6 italic text-sm">"خطة الـ 29 يوماً - 604 صفحة"</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="p-4 bg-emerald-50 rounded-xl">
+                    <span class="block text-xs text-gray-500 mb-1">الأيام المنجزة</span>
+                    <span id="completed-count" class="text-2xl font-bold text-emerald-700">0</span>
+                </div>
+                <div class="p-4 bg-emerald-50 rounded-xl">
+                    <span class="block text-xs text-gray-500 mb-1">النسبة المئوية</span>
+                    <span id="percentage-text" class="text-2xl font-bold text-emerald-700">0%</span>
+                </div>
+                <div class="p-4 bg-emerald-50 rounded-xl">
+                    <span class="block text-xs text-gray-500 mb-1">المتبقي</span>
+                    <span id="remaining-count" class="text-2xl font-bold text-emerald-700">29</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 rounded-full h-3 mb-2">
+                <div id="main-progress-bar" class="bg-emerald-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </section>
+
+        <!-- Instruction for Smart Select -->
+        <p class="text-[10px] text-gray-400 mb-4 text-center italic">تلميح: عند الضغط على يوم بعيد عن تقدمك الحالي، سيتم سؤالك لتحديد الأيام الفائتة دفعة واحدة.</p>
+
+        <!-- Days Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="days-container">
+            <!-- سيتم توليد الأيام بواسطة الجافا سكريبت -->
+        </div>
+
+        <!-- Motivational Quote -->
+        <div id="motivation-box" class="mt-8 p-6 bg-emerald-900 text-white rounded-2xl text-center hidden transition-all duration-300">
+            <p id="motivation-text" class="text-lg quran-font"></p>
+        </div>
+
+    </main>
+
+    <footer class="text-center py-8 text-gray-400 text-sm">
+        <p class="mb-2">صدقة جارية - صُنع لخدمة كتاب الله</p>
+        <button onclick="resetAll()" class="text-red-300 hover:text-red-500 underline text-xs">إعادة ضبط التقدم</button>
+    </footer>
+
+    <script>
+        const daysContainer = document.getElementById('days-container');
+        const totalDays = 29;
+        let completedDays = JSON.parse(localStorage.getItem('quran_progress_days')) || [];
+
+        const schedule = [];
+        let currentPage = 1;
+
+        for (let d = 1; d <= 29; d++) {
+            let dayPrayers = [];
+            if (d <= 28) {
+                dayPrayers = [
+                    { name: 'الفجر', p: 5 },
+                    { name: 'الظهر', p: 4 },
+                    { name: 'العصر', p: 4 },
+                    { name: 'المغرب', p: 4 },
+                    { name: 'العشاء', p: 4 }
+                ];
+            } else {
+                dayPrayers = [
+                    { name: 'الفجر', p: 5 },
+                    { name: 'الظهر', p: 4 },
+                    { name: 'العصر', p: 4 },
+                    { name: 'المغرب', p: 3 }
+                ];
+            }
+
+            let details = dayPrayers.map(pr => {
+                const start = currentPage;
+                const end = currentPage + pr.p - 1;
+                currentPage = end + 1;
+                return { name: pr.name, range: `${start}-${end}` };
+            });
+
+            schedule.push({ day: d, details: details });
+        }
+
+        function init() {
+            renderDays();
+            updateStats();
+            document.getElementById('date-display').innerText = new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function renderDays() {
+            daysContainer.innerHTML = '';
+            schedule.forEach(item => {
+                const isCompleted = completedDays.includes(item.day);
+                const card = document.createElement('div');
+                card.className = `cursor-pointer p-5 rounded-xl border transition-all flex flex-col space-y-3 ${isCompleted ? 'card-active shadow-md' : 'bg-white hover:border-emerald-300 border-gray-100 shadow-sm'}`;
+                card.onclick = () => toggleDay(item.day);
+                
+                let prayersList = item.details.map(p => `
+                    <div class="flex justify-between text-[11px] border-b border-gray-50 pb-1">
+                        <span class="font-bold text-gray-500">${p.name}</span>
+                        <span class="text-emerald-700 font-mono">ص ${p.range}</span>
+                    </div>
+                `).join('');
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="text-[10px] uppercase text-gray-400">اليوم</span>
+                            <div class="text-xl font-black ${isCompleted ? 'text-emerald-700' : 'text-gray-700'}">${item.day}</div>
+                        </div>
+                        <div class="w-6 h-6 rounded-full border flex items-center justify-center ${isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-200 text-transparent'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        ${prayersList}
+                    </div>
+                `;
+                daysContainer.appendChild(card);
+            });
+        }
+
+        function toggleDay(dayNumber) {
+            if (completedDays.includes(dayNumber)) {
+                completedDays = completedDays.filter(d => d !== dayNumber);
+            } else {
+                // التحديد الذكي: التحقق من وجود فجوة
+                const maxCompleted = completedDays.length > 0 ? Math.max(...completedDays) : 0;
+                
+                if (dayNumber > maxCompleted + 1) {
+                    const confirmRange = confirm(`هل تريد تحديد جميع الأيام من ${maxCompleted + 1} إلى ${dayNumber} دفعة واحدة؟`);
+                    if (confirmRange) {
+                        for (let i = maxCompleted + 1; i <= dayNumber; i++) {
+                            if (!completedDays.includes(i)) completedDays.push(i);
+                        }
+                    } else {
+                        completedDays.push(dayNumber);
+                    }
+                } else {
+                    completedDays.push(dayNumber);
+                }
+                
+                showMotivation();
+            }
+            
+            localStorage.setItem('quran_progress_days', JSON.stringify(completedDays));
+            renderDays();
+            updateStats();
+            checkCompletion();
+        }
+
+        function updateStats() {
+            const count = completedDays.length;
+            const percentage = Math.round((count / totalDays) * 100);
+            
+            document.getElementById('completed-count').innerText = count;
+            document.getElementById('remaining-count').innerText = totalDays - count;
+            document.getElementById('percentage-text').innerText = percentage + '%';
+            document.getElementById('main-progress-bar').style.width = percentage + '%';
+        }
+
+        function checkCompletion() {
+            if (completedDays.length === totalDays) {
+                setTimeout(() => {
+                    document.getElementById('congrats-modal').style.display = 'flex';
+                }, 500);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('congrats-modal').style.display = 'none';
+        }
+
+        function showMotivation() {
+            const quotes = ["مبارك! تقبل الله طاعتك.", "خطوة رائعة نحو الختم.", "هنيئاً لك صحبة القرآن.", "اللهم ثبتنا على طاعتك."];
+            const motivationBox = document.getElementById('motivation-box');
+            const motivationText = document.getElementById('motivation-text');
+            motivationText.innerText = quotes[Math.floor(Math.random() * quotes.length)];
+            motivationBox.classList.remove('hidden');
+            setTimeout(() => motivationBox.classList.add('hidden'), 3000);
+        }
+
+        function resetAll() {
+            if(confirm('هل تريد مسح السجل والبدء من جديد؟')) {
+                completedDays = [];
+                localStorage.removeItem('quran_progress_days');
+                renderDays();
+                updateStats();
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
